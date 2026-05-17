@@ -236,3 +236,65 @@ def health():
             "status": "unhealthy",
             "error": str(e)
         }
+
+# =====================================================
+# GET LATEST SENSOR
+# =====================================================
+
+@app.get("/sensor/latest")
+def get_latest_sensor():
+
+    try:
+
+        with engine.connect() as conn:
+
+            result = conn.execute(text("""
+
+            SELECT
+
+                timestamp,
+                temperature,
+                humidity,
+                has_rice_paper,
+                vision_confidence
+
+            FROM sensor_logs
+
+            ORDER BY timestamp DESC
+
+            LIMIT 1
+
+            """))
+
+            row = result.fetchone()
+
+        if row is None:
+
+            return {
+                "status": "empty",
+                "message": "no sensor data"
+            }
+
+        return {
+
+            "status": "success",
+
+            "data": {
+
+                "timestamp": row.timestamp,
+                "temperature": row.temperature,
+                "humidity": row.humidity,
+
+                "has_rice_paper": row.has_rice_paper,
+                "vision_confidence": row.vision_confidence
+
+            }
+
+        }
+
+    except Exception as e:
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
