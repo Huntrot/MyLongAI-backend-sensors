@@ -57,6 +57,7 @@ class VisionPayload(BaseModel):
 
     has_rice_paper: bool
     confidence: float = 0.0
+    timestamp: datetime
 
 # =====================================================
 # ROOT
@@ -173,7 +174,13 @@ def update_vision(data: VisionPayload):
 
                 SELECT id
                 FROM sensor_logs
-                ORDER BY id DESC
+
+                ORDER BY ABS(
+                    EXTRACT(EPOCH FROM (
+                        timestamp - :vision_timestamp
+                    ))
+                )
+
                 LIMIT 1
 
             )
@@ -181,7 +188,8 @@ def update_vision(data: VisionPayload):
             """), {
 
                 "has_rice_paper": data.has_rice_paper,
-                "confidence": data.confidence
+                "confidence": data.confidence,
+                "vision_timestamp": data.timestamp
 
             })
 
