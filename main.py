@@ -90,6 +90,47 @@ def receive_sensor(data: SensorPayload):
 
         with engine.connect() as conn:
 
+            # =========================================
+            # GET LAST VISION STATE
+            # =========================================
+
+            result = conn.execute(text("""
+
+            SELECT
+
+                has_rice_paper,
+                vision_confidence
+
+            FROM sensor_logs
+
+            ORDER BY timestamp DESC
+
+            LIMIT 1
+
+            """))
+
+            last = result.fetchone()
+
+            last_state = False
+            last_conf = 0.0
+
+            if last is not None:
+
+                last_state = last.has_rice_paper
+
+                last_conf = (
+                    last.vision_confidence
+                    if last.vision_confidence is not None
+                    else 0.0
+                )
+
+            print(f"📌 Last vision state: {last_state}")
+            print(f"📌 Last confidence: {last_conf}")
+
+            # =========================================
+            # INSERT SENSOR ROW
+            # =========================================
+
             conn.execute(text("""
 
             INSERT INTO sensor_logs (
@@ -98,7 +139,10 @@ def receive_sensor(data: SensorPayload):
                 date_key,
 
                 temperature,
-                humidity
+                humidity,
+
+                has_rice_paper,
+                vision_confidence
 
             )
 
@@ -108,7 +152,10 @@ def receive_sensor(data: SensorPayload):
                 :date_key,
 
                 :temperature,
-                :humidity
+                :humidity,
+
+                :has_rice_paper,
+                :vision_confidence
 
             )
 
@@ -118,7 +165,10 @@ def receive_sensor(data: SensorPayload):
                 "date_key": now.date(),
 
                 "temperature": data.temperature,
-                "humidity": data.humidity
+                "humidity": data.humidity,
+
+                "has_rice_paper": last_state,
+                "vision_confidence": last_conf
 
             })
 
@@ -173,6 +223,7 @@ def update_vision(data: VisionPayload):
             WHERE id = (
 
                 SELECT id
+
                 FROM sensor_logs
 
                 ORDER BY ABS(
@@ -255,6 +306,7 @@ def get_latest_sensor():
                 timestamp,
                 temperature,
                 humidity,
+
                 has_rice_paper,
                 vision_confidence
 
